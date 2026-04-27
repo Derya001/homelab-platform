@@ -1,0 +1,7 @@
+---
+- name: Test Pi connectivity
+  hosts: raspberrypi
+  gather_facts: false
+  tasks:
+    - name: Ping Pi
+      ansible.builtin.ping:
