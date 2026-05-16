@@ -1,0 +1,15 @@
+[Unit]
+Description=Üvegház I2C Sensor MQTT Publisher
+After=network.target mosquitto.service
+
+[Service]
+ExecStart=/usr/bin/python3 /home/pi/szakdoga/i2c_sensors.py
+WorkingDirectory=/home/pi/szakdoga
+StandardOutput=journal
+StandardError=journal
+Restart=always
+RestartSec=5
+User=pi
+
+[Install]
+WantedBy=multi-user.target
