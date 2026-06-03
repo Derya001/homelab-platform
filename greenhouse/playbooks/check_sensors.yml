@@ -25,9 +25,9 @@
         msg: "{{ item.item }} - {{ 'EXISTS' if item.stat.exists else 'MISSING' }}"
       loop: "{{ script_check.results }}"
 
-    - name: Run sensor check
+    - name: Run single sensor reading
       ansible.builtin.command:
-        cmd: python3 /home/pi/szakdoga/i2c_sensors.py
+        cmd: timeout 10 python3 /home/pi/szakdoga/i2c_sensors.py
       register: sensor_output
       ignore_errors: true
 
