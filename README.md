@@ -13,10 +13,10 @@ This is not a tutorial follow-along. Every component was designed, troubleshot, 
 | Virtualization | VirtualBox (AMD Ryzen 5 1600, 16GB RAM) |
 | OS | Red Hat Enterprise Linux 9 |
 | Kubernetes | K3s (lightweight Kubernetes) |
-| Automation Controller | Ansible AWX (via AWX Operator) |
-| Container Platform | Red Hat OpenShift Developer Sandbox |
+| Automation Controller | Ansible AWX 2.19.1 (via AWX Operator) |
+| Container Platform | Red Hat OpenShift Developer Sandbox (Knative Serverless) |
 | Source Control | GitHub (GitOps) |
-| Managed Endpoint | Raspberry Pi — Smart Greenhouse (IoT) |
+| Managed Endpoint | Raspberry Pi 4 — Smart Greenhouse (IoT) |
 
 ---
 
@@ -31,15 +31,16 @@ GitHub (source of truth)
         │                                                 │
         ▼                                                 ▼
  Ansible Playbooks                              OpenShift Sandbox
-        │                                        (container workloads)
-        ▼
+        │                                        └── greenhouse-dashboard
+        ▼                                            (Flask, Knative)
  Managed Nodes
         │
-        └── Raspberry Pi (Smart Greenhouse)
-               ├── Temperature sensor
-               ├── Humidity sensor
-               ├── Soil moisture sensor
-               └── Actuators (automated environmental control)
+        └── Raspberry Pi 4 (Smart Greenhouse)
+               ├── BH1750     — light sensor
+               ├── SHT31      — temperature + humidity
+               ├── ADS1115    — ADC for soil moisture
+               ├── Node-RED v4.1.10 (systemd, autostart)
+               └── Actuators  — pump + lamp control
 ```
 
 ---
@@ -48,11 +49,15 @@ GitHub (source of truth)
 
 ```
 homelab-platform/
-├── ansible/        # Playbooks and roles for managed nodes
-├── awx/            # AWX configuration as code
-├── openshift/      # OpenShift manifests and deployments
-├── greenhouse/     # Smart greenhouse integration and playbooks
-└── docs/           # Setup guides, architecture notes, cheatsheets
+├── ansible/              # Playbooks and roles for managed nodes
+├── awx/                  # AWX configuration as code
+├── openshift/
+│   └── greenhouse-dashboard/   # Flask dashboard (Dockerfile, app.py)
+├── greenhouse/
+│   ├── flows.json              # Node-RED flow (GitOps managed)
+│   ├── playbooks/              # AWX job playbooks
+│   └── scripts/                # Python sensor + actuator scripts
+└── docs/                 # Setup guides, architecture notes, cheatsheets
 ```
 
 ---
@@ -65,22 +70,51 @@ homelab-platform/
 | K3s cluster | ✅ Running |
 | AWX Operator + AWX instance | ✅ Running |
 | GitHub → AWX Project sync | ✅ Connected |
-| OpenShift Developer Sandbox | 🔄 In progress |
-| Raspberry Pi network integration | 🔄 In progress |
-| Smart greenhouse as managed endpoint | 🔄 In progress |
+| Raspberry Pi as AWX managed node | ✅ Connected (SSH key auth) |
+| Smart greenhouse as managed endpoint | ✅ Live |
+| OpenShift Developer Sandbox | ✅ Running |
+| Greenhouse Dashboard (Flask, OpenShift) | ✅ Deployed |
+| GitHub Webhook → AWX auto-trigger | ⏳ Planned |
 | Full end-to-end automation demo | ⏳ Planned |
+
+---
+
+## AWX Job Templates
+
+All playbooks are stored in this repo and synced to AWX via the GitOps project connection.
+
+| Job Template | Description |
+|---|---|
+| `greenhouse-ping` | Connectivity check |
+| `greenhouse-restart-nodered` | Restart Node-RED systemd service |
+| `greenhouse-backup-flow` | Back up flows.json to GitHub |
+| `greenhouse-deploy-flow` | Deploy flows.json from GitHub to Pi |
+| `greenhouse-update-pi` | Run apt update + upgrade |
+| `greenhouse-check-sensors` | Read live sensor data (10s timeout) |
+| `greenhouse-deploy-scripts` | Deploy Python scripts to Pi |
+
+---
+
+## Greenhouse Dashboard
+
+A Flask-based sensor dashboard deployed on OpenShift as a Knative Serverless application.
+
+**Live URL:**  
+`https://homelab-platform-derya001-dev.apps.rm1.0a51.p1.openshiftapps.com`
+
+> ⚠️ Knative scale-to-zero is active — first load may take 10–20 seconds to cold-start.
 
 ---
 
 ## About the Smart Greenhouse
 
-The managed endpoint in this homelab is a real, functioning smart greenhouse — built as an MSc thesis project in Mechatronical Engineering.
+The managed endpoint in this homelab is a real, functioning smart greenhouse — originally built as an MSc thesis project in Mechatronical Engineering.
 
 It integrates:
-- Temperature, humidity, and soil moisture sensors
-- Actuators for automated environmental control
-- A Raspberry Pi-based control layer
-- Offline-first design for resilience without cloud dependency
+- Temperature, humidity, soil moisture, and light sensors over I2C
+- Actuators for automated pump and lamp control
+- A Raspberry Pi 4-based control layer running Node-RED
+- Offline-first design: local MQTT broker, systemd-managed services, no cloud dependency
 
 In the context of this homelab, the greenhouse serves as a live, physical managed node — demonstrating end-to-end infrastructure automation on a real-world use case rather than a simulated environment.
 
