@@ -1,0 +1,9 @@
+---
+- name: Restart Node-RED service
+  hosts: raspberrypi
+  become: true
+  tasks:
+    - name: Restart nodered service
+      ansible.builtin.service:
+        name: nodered
+        state: restarted

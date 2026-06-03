@@ -1,0 +1,17 @@
+---
+- name: Deploy Node-RED flow from GitHub to Pi
+  hosts: raspberrypi
+  become: true
+  tasks:
+    - name: Copy flows.json to Pi
+      ansible.builtin.copy:
+        src: /homelab-platform/greenhouse/flows.json
+        dest: /home/pi/.node-red/flows.json
+        owner: pi
+        group: pi
+        mode: '0644'
+
+    - name: Restart Node-RED
+      ansible.builtin.service:
+        name: nodered
+        state: restarted

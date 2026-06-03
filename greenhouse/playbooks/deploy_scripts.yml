@@ -1,0 +1,26 @@
+---
+- name: Deploy greenhouse Python scripts to Pi
+  hosts: raspberrypi
+  become: true
+  tasks:
+    - name: Ensure szakdoga directory exists
+      ansible.builtin.file:
+        path: /home/pi/szakdoga
+        state: directory
+        owner: pi
+        group: pi
+        mode: '0755'
+
+    - name: Copy Python scripts to Pi
+      ansible.builtin.copy:
+        src: /homelab-platform/greenhouse/scripts/{{ item }}
+        dest: /home/pi/szakdoga/{{ item }}
+        owner: pi
+        group: pi
+        mode: '0755'
+      loop:
+        - i2c_sensors.py
+        - lamp_off.py
+        - lamp_on_for.py
+        - lamp_test.py
+        - pump_on_for.py

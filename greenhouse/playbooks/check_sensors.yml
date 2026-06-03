@@ -1,0 +1,36 @@
+---
+- name: Check greenhouse sensor status
+  hosts: raspberrypi
+  become: true
+  tasks:
+    - name: Check Node-RED service status
+      ansible.builtin.service_facts:
+
+    - name: Show Node-RED status
+      ansible.builtin.debug:
+        msg: "Node-RED is {{ ansible_facts.services['nodered.service'].state }}"
+
+    - name: Check Python scripts exist
+      ansible.builtin.stat:
+        path: /home/pi/szakdoga/{{ item }}
+      register: script_check
+      loop:
+        - i2c_sensors.py
+        - lamp_off.py
+        - lamp_on_for.py
+        - pump_on_for.py
+
+    - name: Show script status
+      ansible.builtin.debug:
+        msg: "{{ item.item }} - {{ 'EXISTS' if item.stat.exists else 'MISSING' }}"
+      loop: "{{ script_check.results }}"
+
+    - name: Run sensor check
+      ansible.builtin.command:
+        cmd: python3 /home/pi/szakdoga/i2c_sensors.py
+      register: sensor_output
+      ignore_errors: true
+
+    - name: Show sensor output
+      ansible.builtin.debug:
+        msg: "{{ sensor_output.stdout }}"

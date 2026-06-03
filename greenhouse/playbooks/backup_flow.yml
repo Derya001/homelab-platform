@@ -1,0 +1,10 @@
+---
+- name: Backup Node-RED flow to AWX server
+  hosts: raspberrypi
+  become: true
+  tasks:
+    - name: Fetch flows.json from Pi
+      ansible.builtin.fetch:
+        src: /home/pi/.node-red/flows.json
+        dest: /homelab-platform/greenhouse/flows.json
+        flat: true
