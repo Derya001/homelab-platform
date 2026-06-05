@@ -15,6 +15,7 @@ This is not a tutorial follow-along. Every component was designed, troubleshot, 
 | Kubernetes | K3s (lightweight Kubernetes) |
 | Automation Controller | Ansible AWX 2.19.1 (via AWX Operator) |
 | Container Platform | Red Hat OpenShift Developer Sandbox (Knative Serverless) |
+| Overlay Network | Tailscale (mesh VPN, Funnel for public AWX API exposure) |
 | Source Control | GitHub (GitOps) |
 | Managed Endpoint | Raspberry Pi 4 — Smart Greenhouse (IoT) |
 
@@ -29,18 +30,17 @@ GitHub (source of truth)
    AWX Controller  ──────────────────────────────────────┐
    (K3s / RHEL9)                                         │
         │                                                 │
-        ▼                                                 ▼
- Ansible Playbooks                              OpenShift Sandbox
-        │                                        └── greenhouse-dashboard
-        ▼                                            (Flask, Knative)
- Managed Nodes
-        │
-        └── Raspberry Pi 4 (Smart Greenhouse)
-               ├── BH1750     — light sensor
-               ├── SHT31      — temperature + humidity
-               ├── ADS1115    — ADC for soil moisture
-               ├── Node-RED v4.1.10 (systemd, autostart)
-               └── Actuators  — pump + lamp control
+        ▼                                          Tailscale Funnel
+ Ansible Playbooks                                        │
+        │                                                 ▼
+        │ SSH (Tailscale)                      OpenShift Sandbox
+        ▼                                       └── greenhouse-dashboard
+ Raspberry Pi 4 (Smart Greenhouse)                  (Flask, Knative)
+        ├── BH1750     — light sensor                    │
+        ├── SHT31      — temperature + humidity          │ AWX API
+        ├── ADS1115    — ADC for soil moisture           ▼
+        ├── Node-RED v4.1.10 (systemd, autostart)   Live sensor data
+        └── Actuators  — pump + lamp control         (5 min refresh)
 ```
 
 ---
@@ -70,12 +70,13 @@ homelab-platform/
 | K3s cluster | ✅ Running |
 | AWX Operator + AWX instance | ✅ Running |
 | GitHub → AWX Project sync | ✅ Connected |
-| Raspberry Pi as AWX managed node | ✅ Connected (SSH key auth) |
+| Raspberry Pi as AWX managed node | ✅ Connected (Tailscale + SSH key auth) |
 | Smart greenhouse as managed endpoint | ✅ Live |
 | OpenShift Developer Sandbox | ✅ Running |
-| Greenhouse Dashboard (Flask, OpenShift) | ✅ Deployed |
+| Greenhouse Dashboard (Flask, OpenShift) | ✅ Live — real sensor data via AWX API |
+| Tailscale overlay network | ✅ Connected (derya-pc, awx-server, rapsberrypi) |
+| AWX scheduled sensor polling (5 min) | ✅ Running |
 | GitHub Webhook → AWX auto-trigger | ⏳ Planned |
-| Full end-to-end automation demo | ⏳ Planned |
 
 ---
 
@@ -90,19 +91,22 @@ All playbooks are stored in this repo and synced to AWX via the GitOps project c
 | `greenhouse-backup-flow` | Back up flows.json to GitHub |
 | `greenhouse-deploy-flow` | Deploy flows.json from GitHub to Pi |
 | `greenhouse-update-pi` | Run apt update + upgrade |
-| `greenhouse-check-sensors` | Read live sensor data (10s timeout) |
+| `greenhouse-check-sensors` | Read live sensor data (10s timeout) — runs every 5 min via schedule |
 | `greenhouse-deploy-scripts` | Deploy Python scripts to Pi |
 
 ---
 
 ## Greenhouse Dashboard
 
-A Flask-based sensor dashboard deployed on OpenShift as a Knative Serverless application.
+A Flask-based sensor dashboard deployed on OpenShift as a Knative Serverless application.  
+Sensor data is fetched via the AWX REST API from the latest `greenhouse-check-sensors` job output.  
+The AWX instance is exposed securely via Tailscale Funnel (no open ports, no public IP required).
 
 **Live URL:**  
 `https://homelab-platform-derya001-dev.apps.rm1.0a51.p1.openshiftapps.com`
 
-> ⚠️ Knative scale-to-zero is active — first load may take 10–20 seconds to cold-start.
+> ⚠️ Knative scale-to-zero is active — first load may take 10–20 seconds to cold-start.  
+> Sensor data requires the local AWX instance to be running. Values will show as "--" when the host machine is offline.
 
 ---
 
@@ -133,3 +137,4 @@ Target roles: Platform Engineer, DevOps Engineer, Infrastructure Automation Engi
 - [AWX Operator](https://github.com/ansible/awx-operator)
 - [K3s](https://k3s.io)
 - [Red Hat OpenShift Developer Sandbox](https://developers.redhat.com/developer-sandbox)
+- [Tailscale](https://tailscale.com)
