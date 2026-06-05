@@ -9,12 +9,16 @@ AWX_URL = "http://100.115.15.106:32668"
 AWX_TOKEN = os.environ.get("AWX_TOKEN")
 JOB_TEMPLATE_ID = 15
 
+DRY = 26000
+WET = 7000
+
 def get_latest_sensor_data():
     try:
         headers = {
             "Authorization": f"Bearer {AWX_TOKEN}",
             "Content-Type": "application/json"
         }
+
         response = requests.get(
             f"{AWX_URL}/api/v2/job_templates/{JOB_TEMPLATE_ID}/jobs/?order_by=-finished&page_size=1",
             headers=headers,
@@ -36,14 +40,21 @@ def get_latest_sensor_data():
         stdout_response.raise_for_status()
         output = stdout_response.text
 
-        light = re.search(r'Light=([\d.]+)', output)
+        light = re.search(r'Light=([\d.]+)\s+lux', output)
         soil = re.search(r'Soil\(raw\)=(\d+)', output)
-        temp = re.search(r'Temp=([\d.]+)', output)
-        hum = re.search(r'Hum=([\d.]+)', output)
+        temp = re.search(r'Temp=([\d.]+)\s+C', output)
+        hum = re.search(r'Hum=([\d.]+)\s+%', output)
+
+        raw_soil = int(soil.group(1)) if soil else None
+        if raw_soil is not None:
+            raw_clamped = max(WET, min(DRY, raw_soil))
+            soil_pct = round((DRY - raw_clamped) / (DRY - WET) * 100)
+        else:
+            soil_pct = None
 
         return {
             "light": float(light.group(1)) if light else None,
-            "soil": int(soil.group(1)) if soil else None,
+            "soil": soil_pct,
             "temperature": float(temp.group(1)) if temp else None,
             "humidity": float(hum.group(1)) if hum else None
         }
