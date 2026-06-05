@@ -5,7 +5,7 @@ import os
 
 app = Flask(__name__)
 
-AWX_URL = "http://100.115.15.106:32668"
+AWX_URL = "https://awx-server.taileaaeb7.ts.net"
 AWX_TOKEN = os.environ.get("AWX_TOKEN")
 JOB_TEMPLATE_ID = 15
 
