@@ -76,7 +76,7 @@ homelab-platform/
 | Greenhouse Dashboard (Flask, OpenShift) | ✅ Live — real sensor data via AWX API |
 | Tailscale overlay network | ✅ Connected (derya-pc, awx-server, rapsberrypi) |
 | AWX scheduled sensor polling (5 min) | ✅ Running |
-| GitHub Webhook → AWX auto-trigger | ⏳ Planned |
+| GitHub Webhook → AWX auto-trigger | ✅ Live (GitHub Actions + AWX API) |
 
 ---
 
@@ -107,6 +107,24 @@ The AWX instance is exposed securely via Tailscale Funnel (no open ports, no pub
 
 > ⚠️ Knative scale-to-zero is active — first load may take 10–20 seconds to cold-start.  
 > Sensor data requires the local AWX instance to be running. Values will show as "--" when the host machine is offline.
+
+---
+
+## GitOps Pipeline
+
+Changes pushed to the `greenhouse/` directory automatically trigger a deployment workflow:
+
+```
+GitHub push (greenhouse/**)
+    → GitHub Actions
+        → AWX REST API
+            → Workflow: greenhouse-gitops-deploy
+                ├── greenhouse-ping        (connectivity check)
+                ├── greenhouse-deploy-flow (Node-RED flow → Pi)
+                └── greenhouse-deploy-scripts (Python scripts → Pi)
+```
+
+The pipeline uses path filtering — pushes outside `greenhouse/` do not trigger a deployment.
 
 ---
 
