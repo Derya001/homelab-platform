@@ -35,4 +35,3 @@
       ansible.builtin.debug:
         msg: "{{ sensor_output.stdout }}"
 
-          #kommentkommentkommentkomment
