@@ -34,3 +34,5 @@
     - name: Show sensor output
       ansible.builtin.debug:
         msg: "{{ sensor_output.stdout }}"
+
+      #komment
