@@ -10,9 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger AWX Workflow
+        env:
+          AWX_WEBHOOK_KEY: ${{ secrets.AWX_WEBHOOK_KEY }}
         run: |
-          curl -X POST \
+          PAYLOAD='{"ref":"${{ github.ref }}","after":"${{ github.sha }}"}'
+          SIGNATURE=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -hmac "$AWX_WEBHOOK_KEY" | awk '{print $2}')
+          curl -v -X POST \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: push" \
-            -d '{"ref": "${{ github.ref }}", "after": "${{ github.sha }}"}' \
+            -H "X-Hub-Signature-256: sha256=$SIGNATURE" \
+            -d "$PAYLOAD" \
             https://awx-server.taileaaeb7.ts.net/api/v2/workflow_job_templates/16/github/
